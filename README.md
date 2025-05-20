@@ -9,7 +9,7 @@
 
 ## 🛠 Installation
 ```bash
-git clone https://github.com/DEIN_USERNAME/aam-telefon.git
+git clone https://github.com/ucldoc/AAM-0.2-beta/aam-telefon.git
 cd aam-telefon
 chmod +x scripts/install.sh
 ./scripts/install.sh
