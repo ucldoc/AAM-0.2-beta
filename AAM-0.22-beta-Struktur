@@ -1,0 +1,24 @@
+Projektstruktur (Final)
+
+aam-0.2-beta/
+├── build.sh                  # Build-Skript (chmod +x)
+├── Makefile
+├── src/
+│   ├── main.c                # Hauptprogramm
+│   ├── gui/                  # GTK4-Oberfläche
+│   │   ├── window.c          # Hauptfenster
+│   │   └── call_history.c    # Anrufliste
+│   ├── sip/
+│   │   ├── pjsip_init.c      # PJSIP-Initialisierung
+│   │   └── call_handlers.c   # Anrufsteuerung
+│   ├── conference/
+│   │   ├── manager.c         # Konferenzlogik
+│   │   └── dtmf.c            # DTMF-Steuerung
+│   └── utils/
+│       ├── logger.c          # Debug-Logging
+│       └── config_loader.c   # Konfigurationsparser
+├── data/
+│   ├── config.json           # Einstellungen
+│   ├── numbers.txt           # Kontaktliste
+│   └── sounds/              # Audiodateien
+└── README.md                # Build-Anleitung
