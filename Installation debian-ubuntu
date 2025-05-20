@@ -1,0 +1,164 @@
+Schritt 1: Abhängigkeiten installieren (Ubuntu/Debian)
+
+sudo apt update && sudo apt install -y \
+    build-essential \
+    git \
+    pkg-config \
+    libgtk-4-dev \
+    libpjsip2-dev \
+    libsdl2-dev  # Für DTMF-Töne
+
+Schritt 2: Projekt klonen & vorbereiten
+bash
+git clone https://github.com/dein_repo/aam-0.2-beta.git
+cd aam-0.2-beta
+mkdir -p build && cd build
+
+Schritt 3: Makefile anpassen
+makefile
+# Makefile
+CC = gcc
+CFLAGS = -Wall -Wextra `pkg-config --cflags gtk4 pjsua2` -I../include
+LDFLAGS = `pkg-config --libs gtk4 pjsua2` -lSDL2
+
+SRC = $(wildcard ../src/*.c ../src/**/*.c)
+OBJ = $(SRC:.c=.o)
+
+TARGET = aam
+
+all: $(TARGET)
+
+$(TARGET): $(OBJ)
+    $(CC) -o $@ $^ $(LDFLAGS)
+
+clean:
+    rm -f $(TARGET) $(OBJ)
+
+Schritt 4: Hauptprogramm (main.c)
+c
+// src/main.c
+#include "gui/window.h"
+#include "sip/pjsip_init.h"
+
+int main(int argc, char *argv[]) {
+    // GTK initialisieren
+    gtk_init(&argc, &argv);
+    
+    // SIP-Stack starten
+    if (init_sip_stack() != 0) {
+        g_error("SIP-Initialisierung fehlgeschlagen!");
+        return 1;
+    }
+
+    // Hauptfenster erstellen
+    GtkApplication *app = gtk_application_new("org.aam.beta", G_APPLICATION_FLAGS_NONE);
+    g_signal_connect(app, "activate", G_CALLBACK(create_main_window), NULL);
+    
+    int status = g_application_run(G_APPLICATION(app), argc, argv);
+    g_object_unref(app);
+    
+    return status;
+}
+
+
+Schritt 5: GTK-Oberfläche (Beispiel: window.c)
+c
+// src/gui/window.c
+#include <gtk/gtk.h>
+
+void create_main_window(GtkApplication* app, gpointer user_data) {
+    // Fenster erstellen
+    GtkWidget *window = gtk_application_window_new(app);
+    gtk_window_set_title(GTK_WINDOW(window), "AAM v0.2-beta");
+    gtk_window_set_default_size(GTK_WINDOW(window), 800, 600);
+
+    // Layout
+    GtkWidget *grid = gtk_grid_new();
+    gtk_window_set_child(GTK_WINDOW(window), grid);
+
+    // Steuerelemente hinzufügen
+    GtkWidget *btn_start = gtk_button_new_with_label("Konferenz starten");
+    gtk_grid_attach(GTK_GRID(grid), btn_start, 0, 0, 1, 1);
+
+    // Signalhandler
+    g_signal_connect(btn_start, "clicked", G_CALLBACK(on_start_conference), NULL);
+
+    gtk_widget_show(window);
+}
+
+Schritt 6: SIP-Initialisierung (pjsip_init.c)
+c
+// src/sip/pjsip_init.c
+#include <pjsua-lib/pjsua.h>
+
+int init_sip_stack() {
+    pjsua_config cfg;
+    pjsua_logging_config log_cfg;
+
+    pjsua_config_default(&cfg);
+    cfg.cb.on_call_state = &on_call_state_changed;
+    cfg.cb.on_dtmf_digit = &on_dtmf_received;
+
+    pjsua_logging_config_default(&log_cfg);
+    log_cfg.console_level = 4;
+
+    return pjsua_init(&cfg, &log_cfg, NULL) == PJ_SUCCESS ? 0 : -1;
+}
+
+Schritt 7: Konferenzlogik (manager.c)
+c
+// src/conference/manager.c
+void add_participant(pjsua_call_id call_id) {
+    pjsua_conf_port_id call_port, conf_port;
+    pjsua_call_get_conf_port(call_id, &call_port);
+    pjsua_conf_get_port_id(0, &conf_port);  # Hauptkonferenz
+
+    if (get_active_participants() >= MAX_PARTICIPANTS) {
+        g_warning("Maximale Teilnehmerzahl erreicht!");
+        return;
+    }
+
+    pjsua_conf_connect(call_port, conf_port);
+    g_debug("Teilnehmer %d hinzugefügt", call_id);
+}
+
+Schritt 8: Build & Ausführung
+bash
+# Kompilieren
+make -j$(nproc)
+
+# Konfiguration anpassen (optional)
+nano data/config.json
+
+# Starten (mit Debug-Logging)
+./aam --debug
+
+
+🧪 Testprozedur
+Einzelanruf testen:
+
+./aam --manual --number +49123456789
+Konferenz starten:
+
+./aam --auto --max-part 3 --timeout 10
+DTMF testen:
+
+Während eines Anrufs *1 (stumm) oder *2 (laut) tippen
+
+Debugging-Tipps
+Logs einsehen:
+
+tail -f data/debug.log
+PJSIP-Debug:
+
+PJSIP_LOG_LEVEL=6 ./aam
+
+
+Finale Checkliste
+Alle Abhängigkeiten installiert
+
+config.json angepasst (SIP-Zugangsdaten)
+
+DTMF-Töne in data/sounds/ kopiert
+
+Testanrufe durchgeführt
